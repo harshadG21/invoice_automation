@@ -11,8 +11,8 @@ class EmailLog(db.Model):
 
     invoice_id=db.Column(
         db.Integer,
-        db.ForeignKey("invoices.id")
-
+        db.ForeignKey("invoices.id"),
+        nullable=True
     )
 
     recipient_email = db.Column(

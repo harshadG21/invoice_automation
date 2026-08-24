@@ -25,13 +25,13 @@ class Invoice(db.Model):
         nullable=True
     )
 
-    Due_Date = db.Column(
+    due_date = db.Column(
             db.Date,
             nullable=True
     )
 
     subtotal=db.Column(
-        db.Numeric(12.2),
+        db.Numeric(12,2),
         nullable=True
     )
 
@@ -45,7 +45,7 @@ class Invoice(db.Model):
             nullable=True
         )
 
-    currancy=db.Column(
+    currency=db.Column(
             db.String(255),
             nullable=True,
             default="INR"
