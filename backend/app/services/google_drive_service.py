@@ -2,10 +2,13 @@ import os
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES=[
    "https://www.googleapis.com/auth/drive" 
 ]
+
+#connect to google drive
 
 def get_drive_service():
 
@@ -31,6 +34,8 @@ def get_drive_service():
 
     return drive_service
 
+#to get list of invoices
+
 def list_invoice_files():
 
     folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
@@ -49,3 +54,29 @@ def list_invoice_files():
     ).execute()
 
     return results.get("files", [])
+
+#to download file from Google drive to local path
+
+def download_file(file_id,destination_path):
+
+    drive_service=get_drive_service()
+
+    request= drive_service.files().get_media(
+        fileId=file_id
+    )
+
+    with open(destination_path,"wb") as file:
+        downloader = MediaIoBaseDownload(file,request)
+
+        done=False
+
+        while not done:
+            status,done = downloader.next_chunk()
+
+            if status:
+                print(
+                    f"Download progress:"
+                    f"{int(status.progress()*100)}%"
+                )
+
+    return destination_path
