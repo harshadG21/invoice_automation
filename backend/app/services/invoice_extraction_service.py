@@ -14,7 +14,7 @@ import re
 from datetime import datetime
 
 #extract invoice number
-def extract_invoice_numbers(text):
+def extract_invoice_number(text):
 
     pattern= r"Invoice Number:\s*([A-Za-z0-9\-]+)"
 
@@ -172,3 +172,38 @@ def extract_currency(text):
     if match:
         return match.group(1).upper()
     return "INR"    
+
+
+
+"""
+PROJECT STATUS 
+                    GOOGLE DRIVE
+                         │
+                         ▼
+              google_drive_service.py
+                         │
+                         ▼
+              file_processing_service.py
+                         │
+                         ▼
+                  Invoice PDF
+                         │
+                         ▼
+                   ocr_service.py
+                         │
+                         ▼
+                    PaddleOCR
+                         │
+                         ▼
+                  RAW OCR TEXT
+                         │
+                         ▼
+                  invoice_service.py
+                         │
+                 ┌───────┴────────┐
+                 ▼                ▼
+          Field Extraction    Validation
+                 │
+                 ▼
+          Structured Data
+"""

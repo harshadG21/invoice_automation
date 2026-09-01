@@ -59,6 +59,8 @@ def list_invoice_files():
 
 def download_file(file_id,destination_path):
 
+    print("DEBUG download_file ID:", repr(file_id))
+
     drive_service=get_drive_service()
 
     request= drive_service.files().get_media(
