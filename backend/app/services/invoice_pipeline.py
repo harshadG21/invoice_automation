@@ -18,6 +18,10 @@ from app.services.invoice_extraction_service import (
     extract_currency
 )
 
+from app.services.validation_service import validate_invoice,validate_invoice_document
+from app.services.vendors_services import get_or_create_vendor
+from app.services.invoices_services import create_invoice
+
 def process_invoice(file_id,file_name):
 
     file_info=process_invoice_file(
@@ -50,4 +54,44 @@ def process_invoice(file_id,file_name):
         "currency": extract_currency(raw_text)
     }
 
-    return invoice_data
+    is_invoice = validate_invoice_document(
+        invoice_data
+    )
+
+    if not is_invoice:
+        return {
+            "status": "not_an_invoice",
+            "message": "The uploaded document does not appear to be an invoice.",
+            "invoice_data": invoice_data
+        }
+
+    validation_result = validate_invoice(
+        invoice_data
+    )
+
+    if not validation_result["is_valid"]:
+        return{
+            "status":"validation_failed",
+            "errors":validation_result["errors"],
+            "invoice_data" : invoice_data
+        }
+
+    vendor = get_or_create_vendor(
+        invoice_data
+    )
+
+    invoice = create_invoice(
+         invoice_data=invoice_data,
+        vendor_id=vendor.id,
+        file_name=file_name,
+        file_path=file_path,
+        ocr_data=raw_text
+    )
+
+    return {
+        "status": "success",
+        "invoice_id": invoice.id,
+        "vendor_id": vendor.id,
+        "invoice_number": invoice.invoice_number,
+        "invoice_data": invoice_data
+    }

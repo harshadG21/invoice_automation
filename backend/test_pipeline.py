@@ -1,25 +1,25 @@
-# Imports the main invoice pipeline function.
+from app import create_app
 from app.services.invoice_pipeline import process_invoice
 
+# Create the Flask application
+app = create_app()
 
-# This is the Google Drive file ID of our test invoice.
-file_id = "1gXdJplfkuavv07h2Joo5_E2LAF1RUG6I"
+# Application context is required because the pipeline uses SQLAlchemy
+with app.app_context():
 
-# This is the invoice file name.
-file_name = "Invoice_INV-1001.pdf"
+    # Google Drive file ID
+    file_id = "1gXdJplfkuavv07h2Joo5_E2LAF1RUG6I"
 
+    # Invoice file name
+    file_name = "Invoice_INV-1001.pdf"
 
-# Start the complete invoice processing pipeline.
-result = process_invoice(
-    file_id,
-    file_name
-)
+    # Run the complete invoice processing pipeline
+    result = process_invoice(file_id, file_name)
 
+    # Print the pipeline result
+    print("\nINVOICE PIPELINE RESULT")
+    print("=" * 50)
 
-# Display the final structured invoice data.
-print("\nINVOICE PIPELINE RESULT")
-print("=" * 50)
-
-# Print every extracted field.
-for key, value in result.items():
-    print(f"{key}: {value}")
+    # Print every result returned by the pipeline
+    for key, value in result.items():
+        print(f"{key}: {value}")

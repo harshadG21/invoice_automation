@@ -1,6 +1,6 @@
 from app.services.ocr_service import extract_text_as_string
 from app.services.invoice_extraction_service import (
-    extract_invoice_numbers,
+    extract_invoice_number,
     extract_invoice_date,
     extract_due_date,
     extract_vendor_address,
@@ -24,7 +24,7 @@ text = extract_text_as_string(file_path)
 
 
 print("\nINVOICE NUMBER:")
-print(extract_invoice_numbers(text))
+print(extract_invoice_number(text))
 
 print("\nINVOICE DATE:")
 print(extract_invoice_date(text))

@@ -144,7 +144,7 @@ def clean_amount(amount_text):
 
 def extract_subtotal(text):
 
-    pattern = r"(?:Subtotal)[\s\n]*[₹€$]?\s*([\d,]+(?:\.\d{1,2})?)"
+    pattern = r"[^\d\s]?\s*([\d,]+(?:\.\d{1,2})?)\s*Subtotal"
     match = re.search(pattern, text, re.IGNORECASE)
     if match:
         return clean_amount(match.group(1))
