@@ -17,7 +17,7 @@ class Vendor(db.Model):
     email = db.Column(
         db.String(150),
         unique=True,
-        nullable=False
+        nullable=True
     )
 
     phone_number = db.Column(

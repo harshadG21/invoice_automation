@@ -1,7 +1,7 @@
 from app.models.invoice import Invoice
 from app.extensions.database import db
 
-#serches the invoices table using the invoice number
+
 def get_invoice_by_number(invoice_number):
 
     if not invoice_number:
@@ -10,6 +10,7 @@ def get_invoice_by_number(invoice_number):
     return Invoice.query.filter_by(
         invoice_number=invoice_number
     ).first()
+
 
 def create_invoice(
     invoice_data,
@@ -20,19 +21,18 @@ def create_invoice(
 ):
 
     invoice = Invoice(
-
-        invoice_number = invoice_data.get("invoice_number") ,#store invoice number
-        vendor_id = vendor_id,
-        invoice_date = invoice_data.get("invoice_date"),
-        due_date=invoice_data.get("due_date"),
-        subtotal=invoice_data.get("subtotal"),
-        tax_amount = invoice_data.get("tax_amount"),
-        total_amount =  invoice_data.get("total_amount"),
-        currency =  invoice_data.get("currency"),
-        file_name = file_name,
-        file_path = file_path,
+        invoice_number=invoice_data.invoice_number,
+        vendor_id=vendor_id,
+        invoice_date=invoice_data.invoice_date,
+        due_date=invoice_data.due_date,
+        subtotal=invoice_data.financial.subtotal,
+        tax_amount=invoice_data.financial.tax_amount,
+        total_amount=invoice_data.financial.total_amount,
+        currency=invoice_data.financial.currency,
+        file_name=file_name,
+        file_path=file_path,
         ocr_data=ocr_data,
-        status = "received"        
+        status="received"
     )
 
     db.session.add(invoice)
@@ -43,4 +43,5 @@ def create_invoice(
     except Exception:
         db.session.rollback()
         raise
+
     return invoice

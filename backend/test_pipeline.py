@@ -1,25 +1,38 @@
 from app import create_app
+from app.services.google_drive_service import list_invoice_files
 from app.services.invoice_pipeline import process_invoice
 
-# Create the Flask application
+
+# Create the Flask application.
 app = create_app()
 
-# Application context is required because the pipeline uses SQLAlchemy
+
+# Flask-SQLAlchemy requires an application context
+# whenever we use database operations such as Vendor.query or db.session.
 with app.app_context():
 
-    # Google Drive file ID
-    file_id = "1gXdJplfkuavv07h2Joo5_E2LAF1RUG6I"
+    # Get invoice files automatically from Google Drive.
+    files = list_invoice_files()
 
-    # Invoice file name
-    file_name = "Invoice_INV-1001.pdf"
+    # Stop if no invoice files were found.
+    if not files:
+        print("No invoice files found.")
+        exit()
 
-    # Run the complete invoice processing pipeline
-    result = process_invoice(file_id, file_name)
+    # Process each invoice found in Google Drive.
+    for file in files:
 
-    # Print the pipeline result
-    print("\nINVOICE PIPELINE RESULT")
-    print("=" * 50)
+        print("\n========================================")
+        print("PROCESSING:", file["name"])
+        print("========================================")
 
-    # Print every result returned by the pipeline
-    for key, value in result.items():
-        print(f"{key}: {value}")
+        # Send the Google Drive file ID and filename
+        # to the invoice pipeline.
+        result = process_invoice(
+            file_id=file["id"],
+            file_name=file["name"]
+        )
+
+        print("\nRESULT:")
+        print(result)
+        
