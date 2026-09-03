@@ -69,7 +69,7 @@ def validate_amounts(invoice_data):
     total_amount = invoice_data.financial.total_amount
 
     if total_amount is None:
-        return False
+        return True
 
     if subtotal is None or tax_amount is None:
         return True

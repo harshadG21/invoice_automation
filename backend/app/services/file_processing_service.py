@@ -1,7 +1,11 @@
-import os 
+import os
 from pathlib import Path
 
 from app.services.google_drive_service import download_file
+from app.services.ocr_service import extract_text_as_string
+from app.services.invoice_extraction_service import extract_invoice_data
+from app.services.invoice_database_service import save_invoice
+
 
 TEMP_DIR=Path("temp/invoices")
 
@@ -54,6 +58,41 @@ def process_invoice_file(file_id,file_name):
     print(
         f"Invoice Downloaded Successfullly"
         f"{local_path}"
+    )
+
+    print("Starting OCR..")
+
+    extracted_text = extract_text_as_string(
+        str(local_path)
+    )
+
+    if not extracted_text.strip():
+        raise ValueError(
+            f"No text could be extracted from invoice: {file_name}"
+        )
+
+    print("OCR completed successfully")
+
+    print("Extracting Invoice_data...")
+
+    invoice_data = extract_invoice_data(
+        extracted_text
+    )
+
+    print("Invoice data extraction completed")
+
+    print("Saving invoice to database")
+
+    invoice = save_invoice(
+        invoice_data=invoice_data,
+        file_name=file_name,
+        file_path = str(local_path),
+        ocr_text=extracted_text
+    )
+
+    print(
+        f"Invoice saved successfully."
+        f"Invoice ID:{invoice.id}"
     )
 
     return{

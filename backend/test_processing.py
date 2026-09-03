@@ -1,30 +1,36 @@
+from app import create_app
 from app.services.google_drive_service import list_invoice_files
 from app.services.file_processing_service import process_invoice_file
 
 
-files = list_invoice_files()
-
-print("\nFILES FOUND:")
-print("-" * 50)
-
-for file in files:
-    print(
-        file["id"],
-        file["name"],
-        file["mimeType"]
-    )
+app = create_app()
 
 
-if files:
-    first_file = files[0]
+with app.app_context():
 
-    result = process_invoice_file(
-        first_file["id"],
-        first_file["name"]
-    )
+    files = list_invoice_files()
 
-    print("\nPROCESSING RESULT:")
-    print(result)
+    print("\nFILES FOUND:")
+    print("-" * 50)
 
-else:
-    print("No invoice files found.")
+    for file in files:
+        print(
+            file["id"],
+            file["name"],
+            file["mimeType"]
+        )
+
+    if files:
+
+        first_file = files[0]
+
+        result = process_invoice_file(
+            first_file["id"],
+            first_file["name"]
+        )
+
+        print("\nPROCESSING RESULT:")
+        print(result)
+
+    else:
+        print("No invoice files found.")

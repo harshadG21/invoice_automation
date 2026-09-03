@@ -73,3 +73,12 @@ def get_vendor_by_email(email):
     return Vendor.query.filter_by(
         email=email
     ).first()
+
+def get_vendor_by_gst(gst_number):
+
+    if not gst_number:
+        return None
+
+    return Vendor.query.filter_by(
+        gst_number=gst_number
+    ).first()
