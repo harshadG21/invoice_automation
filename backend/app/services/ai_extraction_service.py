@@ -3,15 +3,17 @@ from google.genai import types
 
 from app.config import Config
 from app.schemas.invoice_schema import InvoiceData
+import time 
 
 
 GEMINI_API_KEY = Config.GEMINI_API_KEY
-
 GEMINI_MODEL = Config.GEMINI_MODEL
 
 
-# Create the Gemini client.
-# The client is created only when the API key exists.
+# ---------------------------------------------------------
+# GEMINI CLIENT
+# ---------------------------------------------------------
+
 if GEMINI_API_KEY:
     client = genai.Client(
         api_key=GEMINI_API_KEY
@@ -21,312 +23,213 @@ else:
 
 
 # ---------------------------------------------------------
-# INVOICE EXTRACTION PROMPT
+# EXTRACTION PROMPT
 # ---------------------------------------------------------
 
 INVOICE_EXTRACTION_PROMPT = """
-You are an expert invoice document extraction system.
+You are an expert invoice extraction system.
 
-Your job is to analyze OCR text from a financial document
-and extract accurate structured invoice information.
+Extract structured information from the OCR text below.
 
-The invoice can come from ANY company, country, vendor,
-industry, or invoice layout.
+IMPORTANT FINANCIAL RULES:
 
-Do NOT rely on one fixed invoice format.
+1. SUBTOTAL
 
----------------------------------------------------------
-DOCUMENT TYPE
----------------------------------------------------------
-
-Determine whether the document is actually an invoice.
-
-If it is an invoice:
-document_type = "invoice"
-
-If it is not an invoice:
-document_type = "not_an_invoice"
-
-Do not classify a document as an invoice simply because
-it contains numbers, dates, prices, or company names.
-
----------------------------------------------------------
-VENDOR
----------------------------------------------------------
-
-The vendor is the SELLER / ISSUER of the invoice.
-
-The vendor is NOT necessarily the company appearing under:
-
-- BILL TO
-- BILLED TO
-- CUSTOMER
-- CLIENT
-- BUYER
-- SHIP TO
-- SOLD TO
-
-Example:
-
-ABC Digital Services
-
-BILL TO:
-Global Retail Solutions Pvt. Ltd.
-
-Correct:
-vendor_name = ABC Digital Services
-
-Incorrect:
-vendor_name = Global Retail Solutions Pvt. Ltd.
-
-The vendor is the company that issued the invoice.
-
-Extract:
-
-- Vendor name
-- Vendor email
-- Vendor phone
-- Vendor address
-- GST number / GSTIN
-- PAN number
-
-Do not confuse customer, buyer, shipping, or bank
-information with vendor information.
-
----------------------------------------------------------
-INVOICE NUMBER
----------------------------------------------------------
-
-Possible labels include:
-
-- Invoice No
-- Invoice Number
-- Invoice #
-- Bill No
-- Bill Number
-- Tax Invoice No
-- Tax Invoice Number
-- Reference No
-- Reference Number
-- Document Number
-
-Understand the meaning rather than depending on one
-exact label.
-
-Preserve the invoice number as it appears on the document.
-
----------------------------------------------------------
-INVOICE DATE
----------------------------------------------------------
-
-Possible labels include:
-
-- Invoice Date
-- Bill Date
-- Date
-- Issue Date
-- Document Date
-
-Extract the actual invoice date.
-
-Return it as:
-
-YYYY-MM-DD
-
-Never invent a date.
-
----------------------------------------------------------
-DUE DATE
----------------------------------------------------------
-
-Possible labels include:
-
-- Due Date
-- Payment Due
-- Payment Due Date
-- Due By
-- Payment Deadline
-- Pay Before
-
-Return the date as:
-
-YYYY-MM-DD
-
-If there is no due date, return null.
-
----------------------------------------------------------
-SUBTOTAL
----------------------------------------------------------
-
-Possible labels include:
-
-- Subtotal
-- Taxable Amount
-- Taxable Value
-- Net Amount
-- Net Total
-- Amount Before Tax
-- Taxable Base
-
-These can represent the amount before tax.
-
-Store the value in:
-
-financial.subtotal
-
-Remove currency symbols and commas.
-
-Example:
-
-₹48,000
-
-becomes:
-
-48000
-
----------------------------------------------------------
-TAX
----------------------------------------------------------
-
-Tax can appear as:
-
-- Tax
-- Total Tax
-- GST
-- VAT
-- CGST
-- SGST
-- IGST
-
-If CGST and SGST are both present:
-
-tax_amount = CGST + SGST
-
-Example:
-
-CGST = 4320
-SGST = 4320
-
-tax_amount = 8640
-
-If IGST is present:
-
-tax_amount = IGST
-
-If the invoice explicitly provides a total tax amount,
-use that value.
-
-Do not double-count taxes.
-
----------------------------------------------------------
-TOTAL AMOUNT
----------------------------------------------------------
-
-Possible labels include:
-
-- Total
-- Total Amount
-- Grand Total
-- Amount Payable
-- Amount Due
-- Net Payable
-- Balance Due
-- Final Amount
-
-Identify the final amount that the customer is expected
-to pay.
-
-Store it as:
-
-financial.total_amount
-
-Remove currency symbols and commas.
-
----------------------------------------------------------
-CURRENCY
----------------------------------------------------------
-
-Identify the currency from:
-
-- Currency code
-- Currency symbol
-- Explicit currency name
+financial.subtotal must be the amount BEFORE tax.
 
 Examples:
 
-₹ → INR
+Subtotal ₹25,000 -> 25000
+Taxable Amount ₹48,000 -> 48000
 
-Rs / INR → INR
+Never use CGST, SGST, IGST, VAT, Total Tax,
+Grand Total, or Total Amount as subtotal.
 
-$ → USD when the context clearly indicates USD
 
-€ → EUR
+2. TAX COMPONENTS
 
-£ → GBP
+Extract individual tax components separately.
 
-Do not guess the currency when the evidence is ambiguous.
+If the invoice contains:
 
-Return null when it cannot be confidently determined.
+CGST (9%) = 9090
+SGST (9%) = 9090
 
----------------------------------------------------------
-GENERAL RULES
----------------------------------------------------------
+then return:
 
-Use the meaning and context of the entire invoice.
+cgst = 9090
+sgst = 9090
+igst = null
+tax_amount = 18180
 
-Do NOT simply extract:
+If only CGST exists:
 
-- the first company name
-- the first date
-- the first large number
+cgst = its actual amount
+sgst = null
+igst = null
 
-Understand the relationship between:
+If only SGST exists:
 
-vendor
-customer
-invoice number
-dates
-subtotal
-tax
-total
-currency
+sgst = its actual amount
+cgst = null
+igst = null
 
-before assigning values.
+If IGST exists:
 
-Never invent information.
+igst = its actual amount
 
-If information is not present or cannot be confidently
-determined, return null.
+Do NOT confuse the subtotal with a tax component.
 
----------------------------------------------------------
-OCR TEXT
----------------------------------------------------------
+Do NOT infer a tax component when it is not explicitly present.
 
-Analyze the following OCR text:
+
+3. TOTAL TAX
+
+financial.tax_amount must contain the TOTAL of ALL taxes.
+
+For example:
+
+CGST = 2250
+SGST = 2250
+
+then:
+
+tax_amount = 4500
+
+NOT 2250.
+
+If the invoice explicitly contains:
+
+Total Tax = 4500
+
+then:
+
+tax_amount = 4500.
+
+When individual tax components are available:
+
+cgst + sgst + igst = tax_amount
+
+where applicable.
+
+
+4. TOTAL AMOUNT
+
+financial.total_amount must contain the FINAL invoice
+amount payable by the customer.
+
+If the invoice contains:
+
+Subtotal = 25000
+CGST = 2250
+SGST = 2250
+Total Tax = 4500
+TOTAL AMOUNT = 29500
+
+then:
+
+subtotal = 25000
+cgst = 2250
+sgst = 2250
+igst = null
+tax_amount = 4500
+total_amount = 29500
+
+NEVER use CGST as total_amount.
+
+NEVER use SGST as total_amount.
+
+NEVER use Total Tax as total_amount.
+
+The final total is the amount labelled:
+
+- Total Amount
+- TOTAL AMOUNT
+- Grand Total
+- Amount Payable
+- Amount Due
+- Final Amount
+
+Prefer the explicitly printed final total.
+
+
+5. FINANCIAL CONSISTENCY
+
+When all values are available:
+
+subtotal + tax_amount = total_amount
+
+For example:
+
+25000 + 4500 = 29500
+
+Use this relationship to understand the invoice.
+
+Do not invent numbers.
+
+
+6. VENDOR
+
+The vendor is the company that ISSUED the invoice.
+
+Do not use the BILL TO customer as the vendor.
+
+
+7. DATES
+
+Return dates as YYYY-MM-DD.
+
+Never invent dates.
+
+
+8. CURRENCY
+
+Identify the currency from the invoice.
+
+₹ / Rs / INR -> INR
+$ -> USD when clearly applicable
+€ -> EUR
+£ -> GBP
+
+Return null if unclear.
+
+
+9. DOCUMENT TYPE
+
+If this is an invoice:
+
+document_type = "invoice"
+
+Otherwise:
+
+document_type = "not_an_invoice"
+
+
+Return only structured data matching the provided schema.
+
+OCR TEXT:
 """
 
 
 # ---------------------------------------------------------
-# AI EXTRACTION FUNCTION
+# AI EXTRACTION
 # ---------------------------------------------------------
 
 def extract_invoice_with_ai(text: str) -> InvoiceData:
 
-    # If OCR produced no text, classify the document
-    # as not an invoice instead of sending empty text to Gemini.
+    # If OCR produced no text, the document cannot be extracted.
     if not text or not text.strip():
         return InvoiceData(
             document_type="not_an_invoice"
         )
 
-    # Make sure the Gemini client was created.
-    # If it was not created, the API key is unavailable.
+    # Make sure Gemini API key is configured.
     if client is None:
         raise RuntimeError(
             "GEMINI_API_KEY is not configured."
         )
 
-    # Combine the extraction instructions with the OCR text.
+    # Build the Gemini prompt using the OCR text.
     prompt = f"""
 {INVOICE_EXTRACTION_PROMPT}
 
@@ -335,20 +238,13 @@ def extract_invoice_with_ai(text: str) -> InvoiceData:
 
     try:
 
-        # Send the OCR text to Gemini.
-        # response_schema tells Gemini to return data
-        # matching our InvoiceData Pydantic model.
+        # Send OCR text to Gemini and request structured JSON.
         response = client.models.generate_content(
             model=GEMINI_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
-                # Ask Gemini to return JSON.
                 response_mime_type="application/json",
-
-                # Force the response structure to match InvoiceData.
                 response_schema=InvoiceData,
-
-                # Temperature 0 makes extraction more deterministic.
                 temperature=0,
             ),
         )
@@ -359,20 +255,85 @@ def extract_invoice_with_ai(text: str) -> InvoiceData:
                 "Gemini returned an empty response."
             )
 
-        # Convert Gemini's JSON response into our
-        # Pydantic InvoiceData object.
+        # Convert Gemini JSON into our Pydantic InvoiceData model.
         invoice_data = InvoiceData.model_validate_json(
             response.text
         )
 
-        # Return the structured invoice data
-        # to the invoice pipeline.
+        # Print extracted financial values for debugging.
+        print("\n========== AI FINANCIAL VALUES ==========")
+
+        print(
+            "Subtotal:",
+            invoice_data.financial.subtotal
+        )
+
+        print(
+            "CGST:",
+            invoice_data.financial.cgst
+        )
+
+        print(
+            "SGST:",
+            invoice_data.financial.sgst
+        )
+
+        print(
+            "IGST:",
+            invoice_data.financial.igst
+        )
+
+        print(
+            "Tax Amount:",
+            invoice_data.financial.tax_amount
+        )
+
+        print(
+            "Total Amount:",
+            invoice_data.financial.total_amount
+        )
+
+        print("=========================================\n")
+
         return invoice_data
 
     except Exception as error:
 
-        # Convert any Gemini/API/parsing error into a
-        # clear application-level error.
         raise RuntimeError(
             f"Gemini invoice extraction failed: {error}"
         ) from error
+
+def extract_invoice_with_ai_with_retry(
+        raw_text,
+        max_retries=3
+):
+    for attempt in range(1,max_retries+1):
+
+        try:
+
+            return extract_invoice_with_ai(raw_text)
+
+        except Exception as e:
+
+            print(
+                f"\nGemini extraction failed "
+                f"(attempt {attempt}/{max_retries})"
+            )
+
+            print(f"Error: {e}")
+
+            if attempt == max_retries:
+                print(
+                    "\nGemini extraction failed after"
+                    f"{max_retries} attempts"
+                )
+                raise
+
+            wait_time = attempt * 5
+
+            print(
+               f"Retrying Gemini in "
+               f"{wait_time} seconds..."  
+            )
+
+            time.sleep(wait_time)

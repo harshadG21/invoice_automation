@@ -1,15 +1,12 @@
-import os
 from pathlib import Path
 
 from app.services.google_drive_service import download_file
-from app.services.ocr_service import extract_text_as_string
-from app.services.invoice_extraction_service import extract_invoice_data
-from app.services.invoice_database_service import save_invoice
 
 
-TEMP_DIR=Path("temp/invoices")
+TEMP_DIR = Path("temp/invoices")
 
-#create the temporary invoice directory 
+
+# Create the temporary invoice directory.
 def ensure_temp_directory():
 
     TEMP_DIR.mkdir(
@@ -17,10 +14,11 @@ def ensure_temp_directory():
         exist_ok=True
     )
 
-#check whether the invoice file format is supported
+
+# Check whether the invoice file format is supported.
 def validate_invoice_file(file_name):
 
-    allowed_extensions ={
+    allowed_extensions = {
         ".pdf",
         ".png",
         ".jpg",
@@ -30,74 +28,47 @@ def validate_invoice_file(file_name):
     extension = Path(file_name).suffix.lower()
 
     if extension not in allowed_extensions:
+
         raise ValueError(
-            f"Unsupported invoice file type:{extension}"
+            f"Unsupported invoice file type: {extension}"
         )
 
     return True
 
-#download an invoice and prepare for ocr processsing
 
-def process_invoice_file(file_id,file_name):
+# Download an invoice and prepare it for processing.
+def process_invoice_file(file_id, file_name):
 
-    print(f"Processing invoice:{file_name}")
+    print(f"Processing invoice: {file_name}")
 
+    # Make sure the uploaded file type is supported.
     validate_invoice_file(file_name)
 
+    # Make sure the temporary directory exists.
     ensure_temp_directory()
 
-    local_path = TEMP_DIR/file_name
+    local_path = TEMP_DIR / file_name
 
-    download_file(file_id,str(local_path))
-
-    if not local_path.exists():
-        raise ValueError(
-            f"File was not downloaded:{file_name}"
-        )
-
-    print(
-        f"Invoice Downloaded Successfullly"
-        f"{local_path}"
-    )
-
-    print("Starting OCR..")
-
-    extracted_text = extract_text_as_string(
+    # Download the invoice from Google Drive.
+    download_file(
+        file_id,
         str(local_path)
     )
 
-    if not extracted_text.strip():
+    # Verify that the file actually exists.
+    if not local_path.exists():
+
         raise ValueError(
-            f"No text could be extracted from invoice: {file_name}"
+            f"File was not downloaded: {file_name}"
         )
 
-    print("OCR completed successfully")
-
-    print("Extracting Invoice_data...")
-
-    invoice_data = extract_invoice_data(
-        extracted_text
-    )
-
-    print("Invoice data extraction completed")
-
-    print("Saving invoice to database")
-
-    invoice = save_invoice(
-        invoice_data=invoice_data,
-        file_name=file_name,
-        file_path = str(local_path),
-        ocr_text=extracted_text
-    )
-
     print(
-        f"Invoice saved successfully."
-        f"Invoice ID:{invoice.id}"
+        f"Invoice Downloaded Successfully: {local_path}"
     )
 
-    return{
-        "file_id":file_id,
-        "file_name":file_name,
-        "file_path":str(local_path),
-        "status":"downlaoded"
+    return {
+        "file_id": file_id,
+        "file_name": file_name,
+        "file_path": str(local_path),
+        "status": "downloaded"
     }

@@ -61,10 +61,16 @@ class Invoice(db.Model):
         nullable=True
     )
 
-    status = db.Column(
+    drive_file_id = db.Column(
+       db.String(255),
+       nullable=True,
+       unique=True 
+    )
+
+    payment_status = db.Column(
         db.String(50),
         nullable=False,
-        default="received"
+        default="unpaid"
     )
 
     ocr_data = db.Column(

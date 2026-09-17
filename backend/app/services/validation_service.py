@@ -162,6 +162,11 @@ def validate_invoice(invoice_data):
             "Subtotal + tax does not equal total amount"
         )
 
+    if not validate_tax_components(invoice_data):
+        errors.append(
+            "CGST + SGST + IGST does not equal total tax amount"
+        )
+
     errors.extend(
         validate_dates(invoice_data)
     )
@@ -216,3 +221,32 @@ def validate_invoice(invoice_data):
         "errors": errors,
         "warnings": warnings
     }
+
+def validate_tax_components(invoice_data):
+
+    cgst = invoice_data.financial.cgst
+    sgst = invoice_data.financial.sgst
+    igst = invoice_data.financial.igst
+    tax_amount = invoice_data.financial.tax_amount
+
+    # If total tax is missing, there is nothing to compare.
+    if tax_amount is None:
+        return True
+
+    # If no individual tax components were extracted,
+    # we cannot independently calculate the total tax.
+    if cgst is None and sgst is None and igst is None:
+        return True
+
+    # Add all available tax components.
+    component_total = sum(
+        amount
+        for amount in [cgst, sgst, igst]
+        if amount is not None
+    )
+
+    # Compare component total with declared total tax.
+    return round(component_total, 2) == round(
+        tax_amount,
+        2
+    )

@@ -291,21 +291,79 @@ def clean_amount(amount_text):
 
 def extract_amount_after_label(text, labels):
 
+    labels= sorted(
+        labels,
+        key=len,
+        reverse=True
+    )
+
     label_pattern = "|".join(
         re.escape(label)
         for label in labels
     )
 
-    pattern = rf"(?:{label_pattern})\s*[:\-]?\s*[₹€£$]?\s*([\d,]+(?:\.\d{{1,2}})?)"
+    pattern_after = rf"""
+        (?<![A-Za-z0-9])
+        (?:{label_pattern})
+        (?![A-Za-z0-9])
+        \s*
+
+        # Optional tax rate: (9%)
+        (?:\(\s*\d+(?:\.\d+)?\s*%\))?
+
+        \s*
+
+        # Optional format: @ 9%
+        (?:@\s*\d+(?:\.\d+)?\s*%)?
+
+        \s*
+
+        # Optional colon or dash
+        (?:[:\-])?
+
+        \s*
+
+        # Currency symbol
+        [₹€£$]?
+
+        \s*
+
+        # Amount
+        ([\d,]+(?:\.\d{{1,2}})?)
+    """
 
     match = re.search(
-        pattern,
+        pattern_after,
         text,
-        re.IGNORECASE
+        re.IGNORECASE | re.VERBOSE
     )
 
     if match:
         return clean_amount(match.group(1))
+
+    pattern_before = rf"""
+        [₹€£$]?
+        \s*
+        ([\d,]+(?:\.\d{{1,2}})?)
+        \s*
+
+        (?:\(\s*\d+(?:\.\d+)?\s*%\))?
+        \s*
+
+        (?<![A-Za-z0-9])
+        (?:{label_pattern})
+        (?![A-Za-z0-9])
+    """
+    
+    match = re.search(
+       pattern_before,
+        text,
+        re.IGNORECASE | re.VERBOSE 
+    )
+
+    if match:
+        return clean_amount(match.group(1))
+    
 
     return None
 
@@ -324,8 +382,37 @@ def extract_subtotal(text):
         ]
     )
 
-
 def extract_total_tax(text):
+
+    cgst = extract_amount_after_label(text, ["CGST"])
+    sgst = extract_amount_after_label(text, ["SGST"])
+    igst = extract_amount_after_label(text, ["IGST"])
+
+    print("\n========== TAX DEBUG ==========")
+    print("CGST extracted:", cgst)
+    print("SGST extracted:", sgst)
+    print("IGST extracted:", igst)
+
+    if cgst is not None and sgst is not None:
+        total = cgst + sgst
+        print("CGST + SGST:", total)
+        print("==============================\n")
+        return total
+
+    if igst is not None:
+        print("Using IGST:", igst)
+        print("==============================\n")
+        return igst
+
+    if cgst is not None:
+        print("Using CGST:", cgst)
+        print("==============================\n")
+        return cgst
+
+    if sgst is not None:
+        print("Using SGST:", sgst)
+        print("==============================\n")
+        return sgst
 
     total_tax = extract_amount_after_label(
         text,
@@ -336,37 +423,10 @@ def extract_total_tax(text):
         ]
     )
 
-    if total_tax is not None:
-        return total_tax
+    print("Explicit Total Tax:", total_tax)
+    print("==============================\n")
 
-    cgst = extract_amount_after_label(
-        text,
-        ["CGST"]
-    )
-
-    sgst = extract_amount_after_label(
-        text,
-        ["SGST"]
-    )
-
-    igst = extract_amount_after_label(
-        text,
-        ["IGST"]
-    )
-
-    if igst is not None:
-        return igst
-
-    if cgst is not None and sgst is not None:
-        return cgst + sgst
-
-    if cgst is not None:
-        return cgst
-
-    if sgst is not None:
-        return sgst
-
-    return None
+    return total_tax
 
 
 def extract_total_amount(text):
@@ -423,12 +483,17 @@ def extract_currency(text):
 
 def extract_invoice_data(text):
 
+    print("========== RAW PADDLEOCR TEXT ==========")
+    print(repr(text))
+    print("=========================================") 
+    
     invoice_number = extract_invoice_number(text)
     invoice_date = extract_invoice_date(text)
     due_date = extract_due_date(text)
 
     vendor_name = extract_vendor_name(text)
     vendor_email = extract_vendor_email(text)
+    
     vendor_phone = extract_vendor_phone(text)
     vendor_address = extract_vendor_address(text)
     gst_number = extract_gst_number(text)

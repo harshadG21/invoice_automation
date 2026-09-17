@@ -39,3 +39,43 @@ class Config:
         "GEMINI_MODEL",
         "gemini-3.6-flash"
     )
+
+    MAIL_SERVER = os.getenv(
+        "MAIL_SERVER",
+        "smtp.gmail.com"
+    )
+
+    MAIL_PORT = int(
+        os.getenv(
+            "MAIL_PORT",
+            587
+        )
+    )
+
+    MAIL_USERNAME = os.getenv(
+        "MAIL_USERNAME"
+    )
+
+    MAIL_PASSWORD = os.getenv(
+        "MAIL_PASSWORD"
+    )
+
+    GOOGLE_DRIVE_INCOMING_FOLDER_ID=os.getenv(
+        "GOOGLE_DRIVE_INCOMING_FOLDER_ID"
+    )
+
+    GOOGLE_DRIVE_FAILED_FOLDER_ID=os.getenv(
+            "GOOGLE_DRIVE_FAILED_FOLDER_ID"
+    )
+
+    GOOGLE_DRIVE_DUPLICATE_FOLDER_ID=os.getenv(
+            "GOOGLE_DRIVE_DUPLICATE_FOLDER_ID"
+    )
+
+    GOOGLE_DRIVE_COMPLETED_FOLDER_ID=os.getenv(
+            "GOOGLE_DRIVE_COMPLETED_FOLDER_ID"
+    )
+
+    GOOGLE_DRIVE_PROCESSING_FOLDER_ID=os.getenv(
+            "GOOGLE_DRIVE_PROCESSING_FOLDER_ID"
+    )

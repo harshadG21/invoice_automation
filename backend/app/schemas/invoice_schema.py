@@ -13,6 +13,11 @@ class VendorData(BaseModel):
 
 class FinancialData(BaseModel):
     subtotal :Optional[float] = None
+
+    cgst: Optional[float] = None
+    sgst: Optional[float] = None
+    igst: Optional[float] = None
+
     tax_amount : Optional[float] = None
     total_amount : Optional[float] = None
     currency : Optional[str] = None

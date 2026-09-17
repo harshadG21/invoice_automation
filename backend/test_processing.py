@@ -22,15 +22,32 @@ with app.app_context():
 
     if files:
 
-        first_file = files[0]
+        for file in files:
 
-        result = process_invoice_file(
-            first_file["id"],
-            first_file["name"]
-        )
+            print("\n" + "=" * 60)
+            print(f"PROCESSING INVOICE: {file['name']}")
+            print("=" * 60)
 
-        print("\nPROCESSING RESULT:")
-        print(result)
+            try:
+
+                result = process_invoice_file(
+                    file["id"],
+                    file["name"]
+                )
+
+                print("\nPROCESSING RESULT:")
+                print(result)
+
+            except Exception as e:
+
+                print("\nPROCESSING FAILED:")
+                print(type(e).__name__)
+                print(e)
+
+                print(
+                    f"\nSkipping {file['name']} "
+                    "and continuing with the next invoice..."
+                )
 
     else:
         print("No invoice files found.")
