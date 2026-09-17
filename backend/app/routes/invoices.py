@@ -320,4 +320,38 @@ def delete_invoice(invoice_id):
     return jsonify({
         "message":"Invoice deleted Successfully"
     }),200
+
+@invoice_bp.route("/<int:invoice_id>/payment-status", methods=["PUT"])
+@jwt_required()
+def update_payment_status(invoice_id):
+
+    data = request.get_json() or {}
+
+    invoice = Invoice.query.get(invoice_id)
+
+    if not invoice:
+        return jsonify({
+            "message": "Invoice not found"
+        }), 404
+
+    payment_status = data.get("payment_status")
+
+    # Only allow valid payment statuses
+    if payment_status not in ["unpaid", "paid"]:
+        return jsonify({
+            "message": "payment_status must be either 'unpaid' or 'paid'"
+        }), 400
+
+    invoice.payment_status = payment_status
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Payment status updated successfully",
+        "invoice": {
+            "id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+            "payment_status": invoice.payment_status
+        }
+    }), 200
     
