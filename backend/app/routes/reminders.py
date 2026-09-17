@@ -37,7 +37,7 @@ def get_reminders():
             "invoice_number": invoice.invoice_number,
             "due_date": invoice.due_date.isoformat(),
             "reminder_type": reminder_type,
-            "status": invoice.status
+            "payment_status" : payment_status
         })
 
     return jsonify({

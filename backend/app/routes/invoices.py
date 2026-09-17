@@ -28,7 +28,7 @@ def create_invoice():
     currency = data.get("currency", "INR")
     file_name = data.get("file_name")
     file_path = data.get("file_path")
-    status = data.get("status", "received")
+    payment_status = data.get("status", "received")
     ocr_data = data.get("ocr_data")
 
     if not invoice_number:
@@ -84,7 +84,7 @@ def create_invoice():
         currency=currency,
         file_name=file_name,
         file_path=file_path,
-        status=status,
+        payemnt_status=payment_status,
         ocr_data=ocr_data 
     )
 
@@ -110,7 +110,7 @@ def create_invoice():
             "currency": invoice.currency,
             "file_name": invoice.file_name,
             "file_path": invoice.file_path,
-            "status": invoice.status,
+            "status": invoice.payment_status,
             "ocr_data": invoice.ocr_data
         }
     }),201
@@ -148,7 +148,7 @@ def get_invoices():
             "currency":invoice.currency,
             "fle_name":invoice.file_name,
             "file_path":invoice.file_path,
-            "status":invoice.status,
+            "payment_status":invoice.payment_status,
             "ocr_data": invoice.ocr_data,
             "created_at":(
                 invoice.created_at.isoformat()
@@ -164,56 +164,6 @@ def get_invoices():
         "invoices":invoice_list
     }),200
 
-@invoice_bp.route("/<int:invoice_id>",methods=["GET"])
-@jwt_required()
-def get_invoice(invoice_id):
-
-    invoice = Invoice.query.get(invoice_id)
-
-    if not invoice:
-        return jsonify({
-            "message":"Invoice not Found"
-        }),404
-
-    return jsonify({
-        "invoice":{
-            "id":invoice.id,
-            "invoice_number":invoice.invoice_number,
-            "vendor_id": invoice.vendor_id,
-            "invoice_date":(
-                invoice.invoice_date.isoformat()
-                if invoice.invoice_date else None
-            ),
-            "due_date":(
-                invoice.due_date.isoformat()
-                if invoice.due_date else None
-            ),
-            "subtotal":(
-                float(invoice.subtotal)
-                if invoice.subtotal is not None else None
-            ),
-            "tax_amount":(
-                float(invoice.tax_amount)
-                if invoice.tax_amount is not None else None
-            ),
-            "total_amount":(
-                float(invoice.total_amount)
-                if invoice.total_amount is not None else None
-            ),
-            "currency":invoice.currency,
-            "file_name":invoice.file_name,
-            "status": invoice.status,
-            "ocr_data": invoice.ocr_data,
-            "created_at": (
-                invoice.created_at.isoformat()
-                if invoice.created_at else None
-            ),
-            "updated_at": (
-                invoice.updated_at.isoformat()
-                if invoice.updated_at else None
-            )
-        }
-    }),200
 
 @invoice_bp.route("/<int:invoice_id>",methods=["PUT"])
 @jwt_required()
@@ -238,7 +188,7 @@ def update_invoice(invoice_id):
     currency = data.get("currency")
     file_name = data.get("file_name")
     file_path = data.get("file_path")
-    status = data.get("status")
+    payemnt_status = data.get("payement_status")
     ocr_data = data.get("ocr_data")
 
     if not invoice_number:
@@ -306,7 +256,7 @@ def update_invoice(invoice_id):
     invoice.currency = currency
     invoice.file_name = file_name
     invoice.file_path = file_path
-    invoice.status = status
+    invoice.payment_status= payemnt_status
     invoice.ocr_data = ocr_data
 
     db.session.commit()
@@ -345,7 +295,7 @@ def update_invoice(invoice_id):
             "currency": invoice.currency,
             "file_name": invoice.file_name,
             "file_path": invoice.file_path,
-            "status": invoice.status,
+            "payment_status": invoice.payment_status,
             "ocr_data": invoice.ocr_data
         }
     }),200
