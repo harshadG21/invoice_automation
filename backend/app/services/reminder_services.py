@@ -36,10 +36,10 @@ def get_overdue_invoices():
 
     return invoices
 
-
-def send_invoice_reminder(invoice, recipient_email):
+def send_invoice_reminder(invoice):
     """
-    Send an upcoming invoice payment reminder.
+    Send an upcoming payment reminder to both
+    the vendor and the user.
     """
 
     subject = (
@@ -66,18 +66,41 @@ Regards,
 Invoice Automation System
 """
 
-    return send_email(
-        invoice_id=invoice.id,
-        recipient_email=recipient_email,
-        subject=subject,
-        body=body,
-        email_type="payment_reminder"
-    )
+    email_logs = []
+
+    # Send reminder to the vendor.
+    if invoice.vendor and invoice.vendor.email:
+
+        vendor_email_log = send_email(
+            invoice_id=invoice.id,
+            recipient_email=invoice.vendor.email,
+            subject=subject,
+            body=body,
+            email_type="payment_reminder"
+        )
+
+        email_logs.append(vendor_email_log)
+
+    # Send reminder to the user.
+    if invoice.user and invoice.user.email:
+
+        user_email_log = send_email(
+            invoice_id=invoice.id,
+            recipient_email=invoice.user.email,
+            subject=subject,
+            body=body,
+            email_type="payment_reminder"
+        )
+
+        email_logs.append(user_email_log)
+
+    return email_logs
 
 
-def send_overdue_email(invoice, recipient_email):
+def send_overdue_email(invoice):
     """
-    Send an overdue invoice notification.
+    Send an overdue notification to both
+    the vendor and the user.
     """
 
     subject = (
@@ -105,10 +128,47 @@ Regards,
 Invoice Automation System
 """
 
-    return send_email(
-        invoice_id=invoice.id,
-        recipient_email=recipient_email,
-        subject=subject,
-        body=body,
-        email_type="overdue"
-    )
+    email_logs = []
+
+    # Send overdue notification to the vendor.
+    if invoice.vendor and invoice.vendor.email:
+
+        vendor_email_log = send_email(
+            invoice_id=invoice.id,
+            recipient_email=invoice.vendor.email,
+            subject=subject,
+            body=body,
+            email_type="overdue"
+        )
+
+        email_logs.append(vendor_email_log)
+
+    # Send overdue notification to the user.
+    if invoice.user and invoice.user.email:
+
+        user_email_log = send_email(
+            invoice_id=invoice.id,
+            recipient_email=invoice.user.email,
+            subject=subject,
+            body=body,
+            email_type="overdue"
+        )
+
+        email_logs.append(user_email_log)
+
+    return email_logs
+
+def get_payment_state(invoice):
+
+    #if the invoice has already been paid,don't consider it overdue
+    if invoice.payment_status=="paid":
+        return "paid"
+    
+    #if there is no due date,we cannot determine wheter the invoice is overdue
+    if not invoice.due_date:
+        return "unpaid"
+
+    if invoice.due_date < date.today():
+        return "overdue"
+
+    return "unpaid"

@@ -28,6 +28,7 @@ def is_file_already_processed(drive_file_id):
 def create_invoice(
     invoice_data,
     vendor_id,
+    user_id,
     file_name=None,
     file_path=None,
     ocr_data=None,
@@ -50,6 +51,7 @@ def create_invoice(
     invoice = Invoice(
         invoice_number=invoice_data.invoice_number,
         vendor_id=vendor_id,
+        user_id=user_id,
         invoice_date=invoice_data.invoice_date,
         due_date=invoice_data.due_date,
         subtotal=invoice_data.financial.subtotal,
@@ -60,7 +62,7 @@ def create_invoice(
         file_path=file_path,
         drive_file_id=drive_file_id,
         ocr_data=ocr_data,
-        payment_status="pending"
+        payment_status="unpaid"
     )
 
     db.session.add(invoice)

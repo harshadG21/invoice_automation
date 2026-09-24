@@ -40,6 +40,14 @@ class Config:
         "gemini-3.6-flash"
     )
 
+    OPENROUTER_API_KEY = os.getenv(
+        "OPENROUTER_API_KEY"
+    )
+
+    OPENROUTER_MODEL = os.getenv(
+        "OPENROUTER_MODEL"
+    )
+
     MAIL_SERVER = os.getenv(
         "MAIL_SERVER",
         "smtp.gmail.com"

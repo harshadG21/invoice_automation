@@ -1,0 +1,54 @@
+from app import create_app
+from app.schemas.invoice_schema import InvoiceData
+from app.services.vendors_services import get_or_create_vendor
+
+
+app = create_app()
+
+
+with app.app_context():
+
+    print("\n========================================")
+    print("       VENDOR MATCHING TEST")
+    print("========================================")
+
+    # -------------------------------------------------
+    # TEST 1
+    # GST missing, email available
+    # -------------------------------------------------
+
+    invoice_data = InvoiceData(
+        document_type="invoice",
+        invoice_number="TEST-001",
+
+        vendor={
+            "name": "Skyline Hospitality Group",
+            "email": "accounts@skylinehospitality.com",
+            "phone": None,
+            "address": "Bandra West, Mumbai",
+            "gst_number": None,
+            "pan_number": None
+        },
+
+        financial={
+            "subtotal": 10000,
+            "cgst": 900,
+            "sgst": 900,
+            "igst": None,
+            "tax_amount": 1800,
+            "total_amount": 11800,
+            "currency": "INR"
+        }
+    )
+
+    vendor = get_or_create_vendor(invoice_data)
+
+    print("\n========== RESULT ==========")
+    print("Vendor ID:", vendor.id)
+    print("Vendor Name:", vendor.vendor_name)
+    print("Vendor Email:", vendor.email)
+    print("Vendor GST:", vendor.gst_number)
+    print("============================")
+
+
+print("\nVendor matching test completed.")

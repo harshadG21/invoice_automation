@@ -5,6 +5,7 @@ from datetime import datetime
 from app.extensions.database import db
 from app.models.invoice import Invoice
 from app.models.vendor import Vendor
+from app.services.reminder_services import get_payment_state
 
 invoice_bp = Blueprint(
     "invoice",
@@ -110,7 +111,8 @@ def create_invoice():
             "currency": invoice.currency,
             "file_name": invoice.file_name,
             "file_path": invoice.file_path,
-            "status": invoice.payment_status,
+            "payment_status": invoice.payment_status,
+            "payment_state":get_payment_state(invoice),
             "ocr_data": invoice.ocr_data
         }
     }),201
@@ -120,11 +122,27 @@ def create_invoice():
 @jwt_required()
 def get_invoices():
 
+    payment_state_filter = request.args.get("payment_state")
+
     invoices=Invoice.query.all()
 
     invoice_list=[]
 
     for invoice in invoices:
+
+        payment_state = get_payment_state(invoice)
+        if payment_state_filter:
+            if payment_state_filter not in ["paid", "unpaid", "overdue"]:
+                return jsonify({
+                   "message": (
+                        "payment_state must be "
+                        "'paid', 'unpaid', or 'overdue'" 
+                   )
+                }),400
+            
+            if payment_state != payment_state_filter:
+                continue
+
         invoice_list.append({
             "id":invoice.id,
             "invoice_number":invoice.invoice_number,
@@ -149,6 +167,7 @@ def get_invoices():
             "fle_name":invoice.file_name,
             "file_path":invoice.file_path,
             "payment_status":invoice.payment_status,
+            "payment_state": payment_state,
             "ocr_data": invoice.ocr_data,
             "created_at":(
                 invoice.created_at.isoformat()
@@ -162,6 +181,61 @@ def get_invoices():
 
     return jsonify({
         "invoices":invoice_list
+    }),200
+
+@invoice_bp.route("/payment-summary", methods=["GET"])
+@jwt_required()
+def get_payment_summary():
+
+    invoices = Invoice.query.all()
+
+    paid_count=0
+    unpaid_count = 0
+    overdue_count = 0
+
+    total_amount =0
+    paid_amount =0
+    unpaid_amount = 0
+    overdue_amount = 0
+
+    for invoice in invoices:
+
+        payment_state = get_payment_state(invoice)
+
+        amount=(
+            float(invoice.total_amount)
+            if invoice.total_amount is not None
+            else 0
+        )
+
+        total_amount += amount
+
+        if payment_state == "paid":
+
+            paid_count +=1
+            paid_amount += amount
+
+        elif payment_state == "overdue":
+
+            overdue_count +=1
+            overdue_amount += amount
+
+        else:
+
+            unpaid_count +=1
+            unpaid_amount += amount
+
+    return jsonify({
+        "total_invoices": len(invoices),
+
+        "paid": paid_count,
+        "unpaid": unpaid_count,
+        "overdue": overdue_count,
+
+        "total_amount": total_amount,
+        "paid_amount": paid_amount,
+        "unpaid_amount": unpaid_amount,
+        "overdue_amount": overdue_amount
     }),200
 
 
@@ -354,4 +428,4 @@ def update_payment_status(invoice_id):
             "payment_status": invoice.payment_status
         }
     }), 200
-    
+

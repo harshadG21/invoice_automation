@@ -1,5 +1,6 @@
 from app.models.vendor import Vendor
 from app.extensions.database import db
+from app.services.vendor_matching_service import find_matching_vendor
 
 
 def get_vendor_by_gst(gst_number):
@@ -21,6 +22,37 @@ def get_vendor_by_email(email):
         email=email
     ).first()
 
+def get_vendor_by_name(name):
+
+    if not name:
+        return None
+
+    normalized_name = (
+        name
+        .strip()
+        .lower()
+        .replace(".", "")
+        .replace(",", "")
+    )
+
+    vendors=Vendor.query.all()
+
+    for vendor in vendors:
+        if not vendor.vendor_name:
+            continue
+
+        normalized_vendor_name =(
+            vendor.vendor_name
+            .strip()
+            .lower()
+            .replace(".", "")
+            .replace(",", "")
+        )
+
+        if normalized_vendor_name == normalized_name:
+            return vendor 
+
+    return None
 
 def create_vendor(vendor_data):
 
@@ -46,39 +78,13 @@ def create_vendor(vendor_data):
 
 def get_or_create_vendor(invoice_data):
 
-    vendor_data = invoice_data.vendor
+   vendor = find_matching_vendor(
+       invoice_data.vendor
+   )
 
-    vendor = get_vendor_by_gst(
-        vendor_data.gst_number
-    )
+   if vendor:
+       return vendor
 
-    if vendor:
-        return vendor
-
-    vendor = get_vendor_by_email(
-        vendor_data.email
-    )
-
-    if vendor:
-        return vendor
-
-    return create_vendor(vendor_data)
-
-def get_vendor_by_email(email):
-
-    # Don't query the database when email is missing.
-    if not email:
-        return None
-
-    return Vendor.query.filter_by(
-        email=email
-    ).first()
-
-def get_vendor_by_gst(gst_number):
-
-    if not gst_number:
-        return None
-
-    return Vendor.query.filter_by(
-        gst_number=gst_number
-    ).first()
+   return create_vendor(
+       invoice_data.vendor
+   )

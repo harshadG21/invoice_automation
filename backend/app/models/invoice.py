@@ -20,6 +20,22 @@ class Invoice(db.Model):
         nullable=True
     )
 
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True
+    )
+
+    vendor = db.relationship(
+        "Vendor",
+        backref="invoices"
+    )
+
+    user = db.relationship(
+        "User",
+        backref="invoices" 
+    )
+
     invoice_date = db.Column(
         db.Date,
         nullable=True

@@ -1,45 +1,79 @@
 from app import create_app
 
+from app.models.invoice import Invoice
 from app.services.reminder_services import (
-    get_upcoming_invoices,
-    get_overdue_invoices
+    get_payment_state,
+    send_invoice_reminder,
+    send_overdue_email
 )
 
 
+# Create the Flask application.
 app = create_app()
 
 
+# Database queries require an application context.
 with app.app_context():
 
-    print("\n--- UPCOMING INVOICES ---")
+    print("\n========================================")
+    print("TESTING REMINDER SERVICE")
+    print("========================================")
 
-    upcoming_invoices = get_upcoming_invoices(days=3)
+    # Get one unpaid invoice for testing.
+    invoice = Invoice.query.filter_by(
+        payment_status="unpaid"
+    ).first()
 
-    if not upcoming_invoices:
-        print("No invoices due within the next 3 days.")
+    if not invoice:
 
-    else:
-        for invoice in upcoming_invoices:
-            print(
-                f"Invoice ID: {invoice.id} | "
-                f"Invoice Number: {invoice.invoice_number} | "
-                f"Due Date: {invoice.due_date} | "
-                f"Amount: {invoice.total_amount}"
-            )
-
-
-    print("\n--- OVERDUE INVOICES ---")
-
-    overdue_invoices = get_overdue_invoices()
-
-    if not overdue_invoices:
-        print("No overdue invoices.")
+        print("No unpaid invoice found.")
+        print("Create or use an unpaid invoice first.")
 
     else:
-        for invoice in overdue_invoices:
-            print(
-                f"Invoice ID: {invoice.id} | "
-                f"Invoice Number: {invoice.invoice_number} | "
-                f"Due Date: {invoice.due_date} | "
-                f"Amount: {invoice.total_amount}"
-            )
+
+        print("\nInvoice:")
+        print(invoice.invoice_number)
+
+        print("Vendor:",
+              invoice.vendor.vendor_name
+              if invoice.vendor else "No vendor")
+
+        print("Vendor email:",
+              invoice.vendor.email
+              if invoice.vendor else "No vendor")
+
+        print("User:",
+              invoice.user.email
+              if invoice.user else "No user")
+
+        print("Payment state:",
+              get_payment_state(invoice))
+
+        # -------------------------------------------------
+        # Send the appropriate email for testing.
+        # -------------------------------------------------
+
+        if get_payment_state(invoice) == "overdue":
+
+            print("\nSending overdue email...")
+
+            result = send_overdue_email(invoice)
+
+        elif get_payment_state(invoice) == "unpaid":
+
+            print("\nSending payment reminder...")
+
+            result = send_invoice_reminder(invoice)
+
+        else:
+
+            print("\nInvoice is already paid.")
+            result = None
+
+        print("\nEmail Result:")
+        print(result)
+
+    print("\n========================================")
+    print("REMINDER TEST FINISHED")
+    print("========================================")
+

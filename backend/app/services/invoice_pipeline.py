@@ -10,9 +10,14 @@ from app.services.invoices_services import (
     create_invoice,
     is_file_already_processed
 )
+from app.services.google_drive_service import (
+    move_file_to_processing,
+    move_file_to_completed,
+    move_file_to_duplicates,
+    move_file_to_failed)
 
 
-def process_invoice(file_id, file_name):
+def process_invoice(file_id, file_name,user_id):
 
     if is_file_already_processed(file_id):
 
@@ -29,6 +34,14 @@ def process_invoice(file_id, file_name):
             "file_name": file_name,
             "drive_file_id": file_id
         }
+
+    move_file_to_processing(file_id)
+    print("\n========================================")
+    print("FILE MOVED TO PROCESSING")
+    print("========================================")
+    print("File:", file_name)
+    print("Drive File ID:", file_id)
+    print("========================================")
 
     file_info = process_invoice_file(
         file_id,
@@ -48,9 +61,19 @@ def process_invoice(file_id, file_name):
     if not validate_invoice_document(
         invoice_data
     ):
+        move_file_to_failed(file_id)
+
+        print("\n============================")
+        print("FILE MOVED TO FAILED")
+        print("===============================")
+        print("Reason:Document is not an invoice")
+        print("File:",file_name)
+        print("Drive File ID:", file_id)
+        print("================================")
+        
         return {
             "status": "not_an_invoice",
-            "message": "Gemini determined that the document is not an invoice."
+            "message": "Llama determined that the document is not an invoice."
         }
 
     validation_result = validate_invoice(
@@ -58,7 +81,18 @@ def process_invoice(file_id, file_name):
     )
 
     if not validation_result["is_valid"]:
-        return {
+
+            move_file_to_failed(file_id)
+
+            print("\n========================================")
+            print("FILE MOVED TO FAILED")
+            print("========================================")
+            print("Reason: Invoice validation failed")
+            print("File:", file_name)
+            print("Drive File ID:", file_id)
+            print("========================================")
+            
+            return {
             "status": "validation_failed",
             "errors": validation_result["errors"],
             "warnings": validation_result["warnings"],
@@ -74,6 +108,7 @@ def process_invoice(file_id, file_name):
         invoice = create_invoice(
             invoice_data=invoice_data,
             vendor_id=vendor.id,
+            user_id=user_id,
             file_name=file_name,
             file_path=file_path,
             ocr_data=raw_text,
@@ -90,6 +125,15 @@ def process_invoice(file_id, file_name):
             print("Invoice:", invoice_data.invoice_number)
             print("Message:", e)
 
+            move_file_to_duplicates(file_id)
+
+            print("\n========================================")
+            print("FILE MOVED TO DUPLICATES")
+            print("========================================")
+            print("File:", file_name)
+            print("Drive File ID:", file_id)
+            print("========================================")
+
             return {
                 "status": "duplicate",
                 "reason": "duplicate_invoice",
@@ -98,6 +142,15 @@ def process_invoice(file_id, file_name):
             }
 
         raise
+
+    move_file_to_completed(file_id)
+
+    print("\n========================================")
+    print("FILE MOVED TO COMPLETED")
+    print("========================================")
+    print("File:", file_name)
+    print("Drive File ID:", file_id)
+    print("========================================")
 
     return {
         "status": "success",
